@@ -125,63 +125,66 @@ class Youtube:
         fmt = list()
         js_passed = False
         for stream in self.streamingData:
-            itag = stream["itag"]
-            Mime, Codecs = stream["mimeType"].replace("'", '').split(';')
-            Codecs = Codecs.split('=')[-1].replace(' ', '').split(',')
-            Type = Mime.split('/')[0]
-            adaptive = False
-            progressive = False
-            if Type.lower() == 'video':
-                if len(Codecs) > 1:
-                    vcodec, acodec = Codecs
-                    progressive = True
-                else:
-                    vcodec = Codecs[0]
-                    acodec = None
-                    adaptive = True
-            else:
-                acodec = Codecs[0]
-                vcodec = None
-                adaptive = True
             try:
-                abr = stream["averageBitrate"]
-            except Exception:
-                abr = stream["bitrate"]
-            if 'signatureCipher' in stream.keys():
-                signature, url = stream["signatureCipher"].split('&sp=sig&url=')
-                signature = signature.replace('s=', '', 1).replace('%253D', '=').replace('%3D', '=')
-                deciphered_signature = Decipher().deciphered_signature(
-                    signature, algo_js=self.json_file['js']
-                    )
-                url = unquote(url)+'&sig='+deciphered_signature
-                if js_passed is False:
-                    try:
-                        if get(url, timeout=4, stream=True).status_code != 200:
-                            self.get_js
+                itag = stream["itag"]
+                Mime, Codecs = stream["mimeType"].replace("'", '').split(';')
+                Codecs = Codecs.split('=')[-1].replace(' ', '').split(',')
+                Type = Mime.split('/')[0]
+                adaptive = False
+                progressive = False
+                if Type.lower() == 'video':
+                    if len(Codecs) > 1:
+                        vcodec, acodec = Codecs
+                        progressive = True
+                    else:
+                        vcodec = Codecs[0]
+                        acodec = None
+                        adaptive = True
+                else:
+                    acodec = Codecs[0]
+                    vcodec = None
+                    adaptive = True
+                try:
+                    abr = stream["averageBitrate"]
+                except Exception:
+                    abr = stream["bitrate"]
+                if 'signatureCipher' in stream.keys():
+                    signature, url = stream["signatureCipher"].split('&sp=sig&url=')
+                    signature = signature.replace('s=', '', 1).replace('%253D', '=').replace('%3D', '=')
+                    deciphered_signature = Decipher().deciphered_signature(
+                        signature, algo_js=self.json_file['js']
+                        )
+                    url = unquote(url)+'&sig='+deciphered_signature
+                    if js_passed is False:
+                        try:
+                            if get(url, timeout=4, stream=True).status_code != 200:
+                                self.get_js
+                                deciphered_signature = Decipher().deciphered_signature(signature, algo_js=self.json_file['js'])
+                                url = unquote(url)+'&sig=' + deciphered_signature
+                        except Exception:
+                            self.get_js()
                             deciphered_signature = Decipher().deciphered_signature(signature, algo_js=self.json_file['js'])
                             url = unquote(url)+'&sig=' + deciphered_signature
-                    except Exception:
-                        self.get_js()
-                        deciphered_signature = Decipher().deciphered_signature(signature, algo_js=self.json_file['js'])
-                        url = unquote(url)+'&sig=' + deciphered_signature
-                    js_passed = True
-            else:
-                url = stream["url"].replace('\\u0026', '&')
-            try:
-                fps = stream["fps"]
-                quality = stream["qualityLabel"]
+                        js_passed = True
+                else:
+                    url = stream["url"].replace('\\u0026', '&')
+                try:
+                    fps = stream["fps"]
+                    quality = stream["qualityLabel"]
+                except Exception:
+                    fps = None
+                    quality = stream["quality"]
+                try:
+                    size = stream["contentLength"]
+                except Exception:
+                    size = 0
+                if self.meta is not None:
+                    description = self.meta
+                else:
+                    description = self.description
+                fmt.append(Format(self.category, description, self.title, {'itag': itag, 'mimeType': Mime, 'vcodec': vcodec, 'acodec': acodec, 'fps': fps, 'abr': abr, 'quality': quality, 'url': url, 'size': size, 'adaptive': adaptive, 'progressive': progressive}))
             except Exception:
-                fps = None
-                quality = stream["quality"]
-            try:
-                size = stream["contentLength"]
-            except Exception:
-                size = 0
-            if self.meta is not None:
-                description = self.meta
-            else:
-                description = self.description
-            fmt.append(Format(self.category, description, self.title, {'itag': itag, 'mimeType': Mime, 'vcodec': vcodec, 'acodec': acodec, 'fps': fps, 'abr': abr, 'quality': quality, 'url': url, 'size': size, 'adaptive': adaptive, 'progressive': progressive}))
+                pass
         return fmt
 
 
